@@ -4,19 +4,17 @@ module Kafka
   class SaslPlainAuthenticator
     PLAIN_IDENT = "PLAIN"
 
-    def initialize(connection:, logger:, authzid:, username:, password:)
-      @connection = connection
-      @logger = logger
+    def initialize(uthzid:, username:, password:)
       @authzid = authzid
       @username = username
       @password = password
     end
 
-    def authenticate!
-      response = @connection.send_request(Kafka::Protocol::SaslHandshakeRequest.new(PLAIN_IDENT))
+    def authenticate!(connection, logger)
+      response = connection.send_request(Kafka::Protocol::SaslHandshakeRequest.new(PLAIN_IDENT))
 
-      @encoder = @connection.encoder
-      @decoder = @connection.decoder
+      encoder = connection.encoder
+      decoder = connection.decoder
 
       unless response.error_code == 0 && response.enabled_mechanisms.include?(PLAIN_IDENT)
         raise Kafka::Error, "#{PLAIN_IDENT} is not supported."
@@ -26,14 +24,14 @@ module Kafka
       msg = [@authzid.to_s,
              @username.to_s,
              @password.to_s].join("\000").force_encoding('utf-8')
-      @encoder.write_bytes(msg)
+      encoder.write_bytes(msg)
       begin
-        msg = @decoder.bytes
+        msg = decoder.bytes
         raise Kafka::Error, 'SASL PLAIN authentication failed: unknown error' unless msg
       rescue Errno::ETIMEDOUT, EOFError => e
         raise Kafka::Error, "SASL PLAIN authentication failed: #{e.message}"
       end
-      @logger.debug 'SASL PLAIN authentication successful.'
+      logger.debug 'SASL PLAIN authentication successful.'
     end
   end
 end

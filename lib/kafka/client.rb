@@ -48,18 +48,23 @@ module Kafka
     #
     # @param sasl_gssapi_keytab [String, nil] a KRB5 keytab filepath
     #
+    # @param authenticator [Authenticator, nil] authenticator to use
+    #
+    # @param ssl_context [OpenSSL::SSL:SSLContext, nil] ssl context to use
+    #
     # @return [Client]
     def initialize(seed_brokers:, client_id: "ruby-kafka", logger: nil, connect_timeout: nil, socket_timeout: nil,
                    ssl_ca_cert_file_path: nil, ssl_ca_cert: nil, ssl_client_cert: nil, ssl_client_cert_key: nil,
                    sasl_gssapi_principal: nil, sasl_gssapi_keytab: nil,
-                   sasl_plain_authzid: '', sasl_plain_username: nil, sasl_plain_password: nil)
+                   sasl_plain_authzid: '', sasl_plain_username: nil, sasl_plain_password: nil,
+                   authenticator: nil, ssl_context: nil)
       @logger = logger || Logger.new(nil)
       @instrumenter = Instrumenter.new(client_id: client_id)
       @seed_brokers = normalize_seed_brokers(seed_brokers)
 
-      ssl_context = build_ssl_context(ssl_ca_cert_file_path, ssl_ca_cert, ssl_client_cert, ssl_client_cert_key)
+      ssl_context = ssl_context || build_ssl_context(ssl_ca_cert_file_path, ssl_ca_cert, ssl_client_cert, ssl_client_cert_key)
 
-      sasl_authenticator = SaslAuthenticator.new(
+      sasl_authenticator = authenticator || SaslAuthenticator.new(
         sasl_gssapi_principal: sasl_gssapi_principal,
         sasl_gssapi_keytab: sasl_gssapi_keytab,
         sasl_plain_authzid: sasl_plain_authzid,

@@ -22,9 +22,6 @@ module Kafka
         ssl_context: @ssl_context,
         sasl_authenticator: @sasl_authenticator
       )
-
-      connection
     end
-
   end
 end
