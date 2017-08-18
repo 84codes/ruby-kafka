@@ -1,5 +1,3 @@
-Kafka::Protocol::SaslHandshakeRequest::SUPPORTED_MECHANISMS << 'PLAIN'
-
 module Kafka
   class SaslPlainAuthenticator
     PLAIN_IDENT = "PLAIN"

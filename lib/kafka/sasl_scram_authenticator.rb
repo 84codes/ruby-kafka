@@ -162,5 +162,3 @@ module Kafka
     end
   end
 end
-Kafka::Protocol::SaslHandshakeRequest::SUPPORTED_MECHANISMS << 'SCRAM-SHA-256'
-Kafka::Protocol::SaslHandshakeRequest::SUPPORTED_MECHANISMS << 'SCRAM-SHA-512'
