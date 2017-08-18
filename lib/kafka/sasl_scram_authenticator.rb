@@ -2,8 +2,10 @@ require 'securerandom'
 require 'base64'
 
 module Kafka
+  SCRAM_SHA256 = 'SHA-256'.freeze
+  SCRAM_SHA512 = 'SHA-512'.freeze
   class SaslScramAuthenticator
-    def initialize(username, password, mechanism: 'SHA-256')
+    def initialize(username, password, mechanism: SCRAM_SHA256)
       @username = username
       @password = password
       @mechanism = mechanism
@@ -36,9 +38,10 @@ module Kafka
 
       response = parse_response(@decoder.bytes)
       @logger.debug "server final msg: #{response}"
+      @logger.debug "calculated server signature: #{server_signature}"
 
       raise FailedScramAuthentication, response['e'] if response['e']
-      raise FailedScramAuthentication, 'Invalid server signature' if response['v'] != @server_signature
+      raise FailedScramAuthentication, 'Invalid server signature' if response['v'] != server_signature
     rescue FailedScramAuthentication
       raise
     rescue StandardError => e
@@ -54,30 +57,60 @@ module Kafka
       "n=#{encoded_username},r=#{nonce}"
     end
 
+    def final_message_without_proof
+      "c=biws,r=#{rnonce}"
+    end
+
+    def final_message
+      "#{final_message_without_proof},p=#{client_proof}"
+    end
+
+    def server_data
+      parse_response(@server_first_message)
+    end
+
+    def rnonce
+      server_data['r']
+    end
+
+    def salt
+      Base64.strict_decode64(server_data['s'])
+    end
+
+    def iterations
+      server_data['i'].to_i
+    end
+
     def auth_message
       [first_message_bare, @server_first_message, final_message_without_proof].join(',')
     end
 
-    def final_message_without_proof
-      data = parse_response(@server_first_message)
-      "c=biws,r=#{data['r']}"
+    def salted_password
+      hi(@password, salt, iterations)
     end
 
-    def final_message
-      data = parse_response(@server_first_message)
-      salt = Base64.strict_decode64(data['s'])
-      iterations = data['i'].to_i
+    def client_key
+      hmac(salted_password, 'Client Key')
+    end
 
-      salted_password = hi(@password, salt, iterations)
-      client_key = hmac(salted_password, 'Client Key')
-      stored_key = h(client_key)
-      client_signature = hmac(stored_key, auth_message)
-      client_proof = xor(client_key, client_signature)
-      server_key = hmac(salted_password, 'Server Key')
-      @server_signature = Base64.strict_encode64(hmac(server_key, auth_message))
+    def stored_key
+      h(client_key)
+    end
 
-      proof = Base64.strict_encode64(client_proof)
-      "#{final_message_without_proof},p=#{proof}"
+    def server_key
+      hmac(salted_password, 'Server Key')
+    end
+
+    def client_signature
+      hmac(stored_key, auth_message)
+    end
+
+    def server_signature
+      Base64.strict_encode64(hmac(server_key, auth_message))
+    end
+
+    def client_proof
+      Base64.strict_encode64(xor(client_key, client_signature))
     end
 
     def h(str)
@@ -115,12 +148,12 @@ module Kafka
 
     def digest
       @digest ||= case @mechanism
-                  when 'SHA-256'
+                  when SCRAM_SHA256
                     OpenSSL::Digest::SHA256.new.freeze
-                  when 'SHA-512'
+                  when SCRAM_SHA256
                     OpenSSL::Digest::SHA512.new.freeze
                   else
-                    raise StandardError, 'Unknown mechanism'
+                    raise StandardError, "Unknown mechanism '#{@mechanism}'"
                   end
     end
 
