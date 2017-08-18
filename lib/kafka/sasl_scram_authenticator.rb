@@ -26,19 +26,19 @@ module Kafka
       @decoder = @connection.decoder
 
       msg = first_message
-      @logger.debug "client first message: #{msg}"
+      @logger.debug "[scram] Sending client's first message: #{msg}"
       @encoder.write_bytes(msg)
 
       @server_first_message = @decoder.bytes
-      @logger.debug "server first msg: #{@server_first_message}"
+      @logger.debug "[scram] Received server's first message: #{@server_first_message}"
 
       msg = final_message
-      @logger.debug "client final message: #{msg}"
+      @logger.debug "[scram] Sending client's final message: #{msg}"
       @encoder.write_bytes(msg)
 
       response = parse_response(@decoder.bytes)
-      @logger.debug "server final msg: #{response}"
-      @logger.debug "calculated server signature: #{server_signature}"
+      @logger.debug "[scram] Received server's final msg: #{response}"
+      @logger.debug "[scram] Client calculated server signature: #{server_signature}"
 
       raise FailedScramAuthentication, response['e'] if response['e']
       raise FailedScramAuthentication, 'Invalid server signature' if response['v'] != server_signature
