@@ -1,5 +1,3 @@
-Kafka::Protocol::SaslHandshakeRequest::SUPPORTED_MECHANISMS << 'GSSAPI'
-
 module Kafka
   class PendingMessage
     attr_reader :value, :key, :topic, :partition, :partition_key, :create_time, :bytesize
