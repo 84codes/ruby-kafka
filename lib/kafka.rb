@@ -217,6 +217,16 @@ module Kafka
   class NoPartitionsAssignedError < Error
   end
 
+  class SaslError < Error
+  end
+
+  class SaslScramError < SaslError
+  end
+  
+  class FailedScramAuthentication < SaslScramError
+  end
+
+
   # Initializes a new Kafka client.
   #
   # @see Client#initialize
