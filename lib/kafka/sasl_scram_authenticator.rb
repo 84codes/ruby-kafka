@@ -150,7 +150,7 @@ module Kafka
       @digest ||= case @mechanism
                   when SCRAM_SHA256
                     OpenSSL::Digest::SHA256.new.freeze
-                  when SCRAM_SHA256
+                  when SCRAM_SHA512
                     OpenSSL::Digest::SHA512.new.freeze
                   else
                     raise StandardError, "Unknown mechanism '#{@mechanism}'"
